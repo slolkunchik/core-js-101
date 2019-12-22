@@ -20,8 +20,14 @@
  *    console.log(r.height);      // => 20
  *    console.log(r.getArea());   // => 200
  */
-function Rectangle(/* width, height */) {
-  throw new Error('Not implemented');
+function Rectangle(width, height) {
+  return {
+    width,
+    height,
+    getArea() {
+      return this.height * this.width;
+    },
+  };
 }
 
 
@@ -35,8 +41,8 @@ function Rectangle(/* width, height */) {
  *    [1,2,3]   =>  '[1,2,3]'
  *    { width: 10, height : 20 } => '{"height":10,"width":20}'
  */
-function getJSON(/* obj */) {
-  throw new Error('Not implemented');
+function getJSON(obj) {
+  return JSON.stringify((obj));
 }
 
 
@@ -51,8 +57,10 @@ function getJSON(/* obj */) {
  *    const r = fromJSON(Circle.prototype, '{"radius":10}');
  *
  */
-function fromJSON(/* proto, json */) {
-  throw new Error('Not implemented');
+function fromJSON(proto, json) {
+  const argObj = JSON.parse(json);
+  const values = Object.values(argObj);
+  return new proto.constructor(...values);
 }
 
 
@@ -110,36 +118,135 @@ function fromJSON(/* proto, json */) {
  *  For more examples see unit tests.
  */
 
+class Builder {
+  constructor() {
+    this.selectors = [];
+    this.repeatError = 'Element, id and pseudo-element should not occur more then one time inside the selector';
+    this.orderError = 'Selector parts should be arranged in the following order: element, id, class, attribute, pseudo-class, pseudo-element';
+  }
+
+  add(type, value, priority) {
+    this.selectors.push({
+      type,
+      value,
+      priority,
+    });
+
+    return this;
+  }
+
+  element(value) {
+    if (this.isSelectorExist('element')) {
+      throw new Error(this.repeatError);
+    }
+    if (this.isPriorityRight(1)) {
+      throw new Error(this.orderError);
+    }
+    this.add('element', `${value}`, 1);
+    return this;
+  }
+
+  id(value) {
+    if (this.isSelectorExist('id')) {
+      throw new Error(this.repeatError);
+    }
+    if (this.isPriorityRight(2)) {
+      throw new Error(this.orderError);
+    }
+    this.add('id', `#${value}`, 2);
+    return this;
+  }
+
+  class(value) {
+    if (this.isPriorityRight(3)) {
+      throw new Error(this.orderError);
+    }
+    this.add('class', `.${value}`, 3);
+    return this;
+  }
+
+  attr(value) {
+    if (this.isPriorityRight(4)) {
+      throw new Error(this.orderError);
+    }
+    this.add('attr', `[${value}]`, 4);
+    return this;
+  }
+
+  pseudoClass(value) {
+    if (this.isPriorityRight(5)) {
+      throw new Error(this.orderError);
+    }
+    this.add('pseudoClass', `:${value}`, 5);
+    return this;
+  }
+
+  pseudoElement(value) {
+    if (this.isSelectorExist('pseudoElement')) {
+      throw new Error(this.repeatError);
+    }
+    if (this.isPriorityRight(6)) {
+      throw new Error(this.orderError);
+    }
+    this.add('pseudoElement', `::${value}`, 6);
+    return this;
+  }
+
+  isSelectorExist(type) {
+    return this.selectors.some((obj) => obj.type === type);
+  }
+
+  isPriorityRight(priority) {
+    return (this.selectors.length !== 0)
+      && (this.selectors[this.selectors.length - 1].priority > priority);
+  }
+
+  raw(value) {
+    this.add('raw', value);
+    return this;
+  }
+
+  stringify() {
+    let string = '';
+    for (let i = 0; i < this.selectors.length; i += 1) {
+      string += this.selectors[i].value;
+    }
+    this.selectors = [];
+    return string;
+  }
+}
+
+
 const cssSelectorBuilder = {
-  element(/* value */) {
-    throw new Error('Not implemented');
+  element(value) {
+    return (new Builder()).element(value);
   },
 
-  id(/* value */) {
-    throw new Error('Not implemented');
+  id(value) {
+    return (new Builder()).id(value);
   },
 
-  class(/* value */) {
-    throw new Error('Not implemented');
+  class(value) {
+    return (new Builder()).class(value);
   },
 
-  attr(/* value */) {
-    throw new Error('Not implemented');
+  attr(value) {
+    return (new Builder()).attr(value);
   },
 
-  pseudoClass(/* value */) {
-    throw new Error('Not implemented');
+  pseudoClass(value) {
+    return (new Builder()).pseudoClass(value);
   },
 
-  pseudoElement(/* value */) {
-    throw new Error('Not implemented');
+  pseudoElement(value) {
+    return (new Builder()).pseudoElement(value);
   },
 
-  combine(/* selector1, combinator, selector2 */) {
-    throw new Error('Not implemented');
+  // eslint-disable-next-line no-unused-vars
+  combine(selector1, combinator, selector2) {
+    return (new Builder()).raw(selector1.stringify()).raw(` ${combinator} `).raw(selector2.stringify());
   },
 };
-
 
 module.exports = {
   Rectangle,
